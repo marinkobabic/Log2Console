@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.ComponentModel;
 using System.IO;
+using System.Linq;
 using System.Text;
 
 using Log2Console.Log;
@@ -202,6 +203,7 @@ namespace Log2Console.Receiver
             var sb = new StringBuilder();
             List<LogMessage> logMsgs = new List<LogMessage>();
             
+
             while ((line = _fileReader.ReadLine()) != null)
             {
                 if (_fileFormat == FileFormatEnums.Flat)
@@ -222,8 +224,8 @@ namespace Log2Console.Receiver
                     // This condition allows us to process events that spread over multiple lines
                     if (line.Contains("</log4j:event>"))
                     {
-                        LogMessage logMsg = ReceiverUtils.ParseLog4JXmlLogEvent(sb.ToString(), _fullLoggerName);
-                        logMsgs.Add(logMsg);
+                        
+                        this.GetParser(sb.ToString()).Parse(sb.ToString(), _fullLoggerName, l => logMsgs.Add(l));
                         sb = new StringBuilder();
                     }
                 }

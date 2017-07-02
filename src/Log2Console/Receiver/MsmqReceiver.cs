@@ -1,6 +1,8 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.ComponentModel;
 using System.IO;
+using System.Linq;
 using System.Threading;
 using System.Messaging;
 
@@ -20,7 +22,8 @@ namespace Log2Console.Receiver
         [NonSerialized]
         private Timer _queueCreationCheckTimer;
 
-        [NonSerialized] private const int QueueCheckTimerDelayAndInterval = 5000;
+        [NonSerialized]
+        private const int QueueCheckTimerDelayAndInterval = 5000;
 
 
         private string _queueName = @".\private$\log";
@@ -52,7 +55,7 @@ namespace Log2Console.Receiver
         [Description("If true multiple messages in the queue are processed as one update to the log viewer.  This improves the performance of the viewer")]
         public bool BulkProcessBackedUpMessages
         {
-            get { return _bulkProcessBackedUpMessages;}
+            get { return _bulkProcessBackedUpMessages; }
             set { _bulkProcessBackedUpMessages = value; }
         }
 
@@ -69,8 +72,8 @@ namespace Log2Console.Receiver
                     "\tlabel = \"${logger}\" />" + Environment.NewLine +
                     Environment.NewLine + Environment.NewLine +
                     "Configuration for log4net:" + Environment.NewLine +
-                    Environment.NewLine + 
-                    "NOTE:  log4net (1.2.10) does not include an MSMQ appender.  The following configuration is based on the MSMQ Appender in '.\\examples\\net\\1.0\\Appenders\\SampleAppendersApp\\cs\\src' that is included in the log4net download."+
+                    Environment.NewLine +
+                    "NOTE:  log4net (1.2.10) does not include an MSMQ appender.  The following configuration is based on the MSMQ Appender in '.\\examples\\net\\1.0\\Appenders\\SampleAppendersApp\\cs\\src' that is included in the log4net download." +
                     Environment.NewLine + Environment.NewLine +
                     "<appender name=\"MsmqAppender\" type=\"SampleAppendersApp.Appender.MsmqAppender, SampleAppendersApp\">" +
                     Environment.NewLine +
@@ -118,7 +121,7 @@ namespace Log2Console.Receiver
 
             _queue = new MessageQueue(this.QueueName);
 
-            _queue.ReceiveCompleted += delegate(Object source, ReceiveCompletedEventArgs asyncResult)
+            _queue.ReceiveCompleted += delegate (Object source, ReceiveCompletedEventArgs asyncResult)
             {
                 try
                 {
@@ -128,15 +131,19 @@ namespace Log2Console.Receiver
                     if (Notifiable != null)
                     {
                         string loggingEvent = System.Text.Encoding.ASCII.GetString(((MemoryStream)m.BodyStream).ToArray());
-                        LogMessage logMsg = ReceiverUtils.ParseLog4JXmlLogEvent(loggingEvent, "MSMQLogger");
-                        logMsg.LoggerName = string.Format("{0}_{1}", QueueName.TrimStart('.'), logMsg.LoggerName);
-                        Notifiable.Notify(logMsg);
+                        var action = new Action<LogMessage>(logMsg =>
+                        {
+                            logMsg.LoggerName = $"{QueueName.TrimStart('.')}_{logMsg.LoggerName}";
+                            Notifiable.Notify(logMsg);
+                        });
+                        this.GetParser(loggingEvent).Parse(loggingEvent, "MSMQLogger", action);
+
                     }
 
 
                     if (this.BulkProcessBackedUpMessages)
                     {
-                        Message[] all = ((MessageQueue) source).GetAllMessages();
+                        Message[] all = ((MessageQueue)source).GetAllMessages();
                         if (all.Length > 0)
                         {
                             int numberofmessages = all.Length > 1000 ? 1000 : all.Length;
@@ -145,13 +152,16 @@ namespace Log2Console.Receiver
 
                             for (int i = 0; i < numberofmessages; i++)
                             {
-                                Message thisone = ((MessageQueue) source).Receive();
+                                Message thisone = ((MessageQueue)source).Receive();
 
                                 string loggingEvent =
-                                    System.Text.Encoding.ASCII.GetString(((MemoryStream) thisone.BodyStream).ToArray());
-                                LogMessage logMsg = ReceiverUtils.ParseLog4JXmlLogEvent(loggingEvent, "MSMQLogger");
-                                logMsg.LoggerName = string.Format("{0}_{1}", QueueName.TrimStart('.'), logMsg.LoggerName);
-                                logs[i] = logMsg;
+                                    System.Text.Encoding.ASCII.GetString(((MemoryStream)thisone.BodyStream).ToArray());
+                                var action = new Action<LogMessage>(logMsg =>
+                                {
+                                    logMsg.LoggerName = string.Format("{0}_{1}", QueueName.TrimStart('.'), logMsg.LoggerName);
+                                    logs[i] = logMsg;
+                                });
+                                this.GetParser(loggingEvent).Parse(loggingEvent, "MSMQLogger", action);
                             }
 
                             Notifiable.Notify(logs);

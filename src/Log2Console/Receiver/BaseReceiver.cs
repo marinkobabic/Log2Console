@@ -1,7 +1,8 @@
 using System;
 using System.ComponentModel;
-
+using System.IO;
 using Log2Console.Log;
+using Log2Console.Receiver.Parser;
 
 
 namespace Log2Console.Receiver
@@ -15,6 +16,30 @@ namespace Log2Console.Receiver
         [NonSerialized]
         private string _displayName;
 
+        [NonSerialized]
+        private ParserBase _parser;
+
+        protected ParserBase GetParser(string logStream)
+        {
+            if (_parser != null)
+            {
+                return _parser;
+            }
+            var factory = new ParserFactory();
+            _parser = factory.GetParser(logStream);
+            return _parser;
+        }
+
+        protected ParserBase GetParser(Stream logStream)
+        {
+            if (_parser != null)
+            {
+                return _parser;
+            }
+            var factory = new ParserFactory();
+            _parser = factory.GetParser(logStream);
+            return _parser;
+        }
 
         #region IReceiver Members
 
@@ -42,4 +67,5 @@ namespace Log2Console.Receiver
 
         #endregion
     }
+
 }

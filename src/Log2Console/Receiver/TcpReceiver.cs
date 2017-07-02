@@ -1,128 +1,159 @@
 using System;
 using System.ComponentModel;
 using System.IO;
+using System.Linq;
 using System.Net;
 using System.Net.Sockets;
+using System.Runtime.Serialization.Formatters.Binary;
+using System.Text;
 using System.Threading;
+using System.Threading.Tasks;
+using System.Xml;
+using Log2Console.Log;
+using Log2Console.Receiver.Parser;
 
 namespace Log2Console.Receiver
 {
-  [Serializable]
-  [DisplayName("TCP (IP v4 and v6)")]
-  public class TcpReceiver : BaseReceiver
-  {
-    #region Port Property
-
-    int _port = 4505;
-    [Category("Configuration")]
-    [DisplayName("TCP Port Number")]
-    [DefaultValue(4505)]
-    public int Port
+    [Serializable]
+    [DisplayName("TCP (IP v4 and v6)")]
+    public class TcpReceiver : BaseReceiver
     {
-      get { return _port; }
-      set { _port = value; }
+        #region Port Property
+
+        int _port = 4505;
+        [Category("Configuration")]
+        [DisplayName("TCP Port Number")]
+        [DefaultValue(4505)]
+        public int Port
+        {
+            get { return _port; }
+            set { _port = value; }
+        }
+
+        #endregion
+
+        #region IpV6 Property
+
+        bool _ipv6;
+        [Category("Configuration")]
+        [DisplayName("Use IPv6 Addresses")]
+        [DefaultValue(false)]
+        public bool IpV6
+        {
+            get { return _ipv6; }
+            set { _ipv6 = value; }
+        }
+
+        private int _bufferSize = 10000;
+        [Category("Configuration")]
+        [DisplayName("Receive Buffer Size")]
+        [DefaultValue(10000)]
+        public int BufferSize
+        {
+            get { return _bufferSize; }
+            set { _bufferSize = value; }
+        }
+
+        #endregion
+
+        #region IReceiver Members
+
+        [Browsable(false)]
+        public override string SampleClientConfig
+        {
+            get
+            {
+                return
+                    "Configuration for NLog:" + Environment.NewLine +
+                    "<target name=\"TcpOutlet\" xsi:type=\"NLogViewer\" address=\"tcp://localhost:4505\"/>";
+            }
+        }
+
+        [NonSerialized]
+        TcpClient _tcpClient;
+
+        public override void Initialize()
+        {
+            if (_tcpClient != null) return;
+
+            TcpListener listener = new TcpListener(_ipv6 ? IPAddress.IPv6Any : IPAddress.Any, _port);
+            listener.ExclusiveAddressUse = true;
+            listener.Start(100);
+
+            _tcpClient = listener.AcceptTcpClient();
+            _tcpClient.ReceiveBufferSize = _bufferSize;
+
+            Task.Run(() => this.Start());
+        }
+
+        private void Start()
+        {
+            try
+            {
+                using (_tcpClient)
+                {
+
+                    while (_tcpClient != null)
+                    {
+                        if (!_tcpClient.Connected)
+                        {
+                            this.Terminate();
+                            Thread.Sleep(TimeSpan.FromSeconds(1));
+                            this.Initialize();
+                            return;
+                        }
+
+                        var ns = this.GetStream(_tcpClient);
+                   
+                        var action = new Action<LogMessage>(logMsg =>
+                        {
+                            logMsg.LoggerName = string.Format(":{1}.{0}", logMsg.LoggerName, _port);
+
+                            Notifiable?.Notify(logMsg);
+                        });
+                        this.GetParser(ns).Parse(ns, "TcpLogger", action);
+                    }
+                }
+
+            }
+            catch (IOException ioException)
+            {
+                Console.WriteLine(ioException);
+            }
+            catch (Exception e)
+            {
+                Console.WriteLine(e);
+            }
+        }
+
+        private MemoryStream GetStream(TcpClient tcpClient)
+        {
+            using (NetworkStream stream = tcpClient.GetStream())
+            {
+                byte[] data = new byte[1024];
+                var ms = new MemoryStream();
+
+                int numBytesRead;
+                while (stream.DataAvailable && (numBytesRead = stream.Read(data, 0, data.Length)) > 0)
+                {
+                    ms.Write(data, 0, numBytesRead);
+                }
+
+                var test = ms.GenerateStringFromStream(Encoding.Default);
+                var jou = test.Split('\0');
+                ms.Position = 0;
+                return ms;
+            }
+        }
+
+        public override void Terminate()
+        {
+            if (_tcpClient == null) return;
+
+            _tcpClient.Close();
+            _tcpClient = null;
+        }
+
+        #endregion
     }
-
-    #endregion
-
-    #region IpV6 Property
-
-    bool _ipv6;
-    [Category("Configuration")]
-    [DisplayName("Use IPv6 Addresses")]
-    [DefaultValue(false)]
-    public bool IpV6
-    {
-      get { return _ipv6; }
-      set { _ipv6 = value; }
-    }
-
-    private int _bufferSize = 10000;
-    [Category("Configuration")]
-    [DisplayName("Receive Buffer Size")]
-    [DefaultValue(10000)]
-    public int BufferSize
-    {
-        get { return _bufferSize; }
-        set { _bufferSize = value; }
-    }
-
-    #endregion
-
-    #region IReceiver Members
-
-    [Browsable(false)]
-    public override string SampleClientConfig
-    {
-      get
-      {
-        return
-            "Configuration for NLog:" + Environment.NewLine +
-            "<target name=\"TcpOutlet\" xsi:type=\"NLogViewer\" address=\"tcp://localhost:4505\"/>";
-      }
-    }
-
-    [NonSerialized]
-    Socket _socket;
-
-    public override void Initialize()
-    {
-      if (_socket != null) return;
-
-      _socket = new Socket(_ipv6 ? AddressFamily.InterNetworkV6 : AddressFamily.InterNetwork, SocketType.Stream, ProtocolType.Tcp);
-      _socket.ExclusiveAddressUse = true;
-      _socket.Bind(new IPEndPoint(_ipv6 ? IPAddress.IPv6Any : IPAddress.Any, _port));
-      _socket.Listen(100);
-      _socket.ReceiveBufferSize = _bufferSize;
-
-      var args = new SocketAsyncEventArgs();
-      args.Completed += AcceptAsyncCompleted;
-
-      _socket.AcceptAsync(args);
-    }
-
-    void AcceptAsyncCompleted(object sender, SocketAsyncEventArgs e)
-    {
-      if (_socket == null || e.SocketError != SocketError.Success) return;
-
-      new Thread(Start) { IsBackground = true }.Start(e.AcceptSocket);
-
-      e.AcceptSocket = null;
-      _socket.AcceptAsync(e);
-    }
-
-    void Start(object newSocket)
-    {
-      try
-      {
-        using (var socket = (Socket)newSocket)
-        using (var ns = new NetworkStream(socket, FileAccess.Read, false))
-          while (_socket != null)
-          {
-            var logMsg = ReceiverUtils.ParseLog4JXmlLogEvent(ns, "TcpLogger");
-            logMsg.LoggerName = string.Format(":{1}.{0}", logMsg.LoggerName, _port);
-
-            if (Notifiable != null)
-              Notifiable.Notify(logMsg);
-          }
-      }
-      catch (IOException)
-      {
-      }
-      catch (Exception e)
-      {
-        Console.WriteLine(e);
-      }
-    }
-
-    public override void Terminate()
-    {
-      if (_socket == null) return;
-
-      _socket.Close();
-      _socket = null;
-    }
-
-    #endregion
-  }
 }
