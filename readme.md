@@ -1,4 +1,4 @@
-log4net.confi
+log4net.config
 
 <log4net>
   <root>
@@ -55,4 +55,30 @@ nlog.config
   </rules>
 
 </nlog>
+
+log4j.yml
+
+Configutation:
+  name: Default
+
+  Appenders:
+
+    Console:
+      name: Console_Appender
+      target: SYSTEM_OUT
+      XMLLayout:
+        complete: true
+
+    Socket:
+      name: Socket_Appender
+      host: 127.0.0.1
+      port: 4447
+      protocol: TCP
+
+  Loggers:
+
+      Root:
+        level: debug
+        AppenderRef:
+          - ref: Socket_Appender
 
