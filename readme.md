@@ -18,7 +18,7 @@ log4net.config
     <layout type="log4net.Layout.XmlLayout" />
   </appender>
 </log4net>
-```xml
+```
 
 
 
@@ -57,10 +57,10 @@ nlog.config
   </rules>
 
 </nlog>
-```xml
+```
 
 log4j.yml
-```
+---
 Configutation:
   name: Default
 
@@ -84,4 +84,4 @@ Configutation:
         level: debug
         AppenderRef:
           - ref: Socket_Appender
-```
+---
