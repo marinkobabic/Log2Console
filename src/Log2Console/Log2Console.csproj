@@ -112,6 +112,7 @@
     <Compile Include="Properties\AssemblyInfo.cs" />
     <Compile Include="Receiver\CsvFileReceiver.cs" />
     <Compile Include="Receiver\Parser\Log4j2Parser.cs" />
+    <Compile Include="Receiver\Parser\Log4jNetParser.cs" />
     <Compile Include="Receiver\Parser\LoggingEvent.cs" />
     <Compile Include="Receiver\Parser\StreamExtensions.cs" />
     <Compile Include="Receiver\Parser\Log4jParser.cs" />

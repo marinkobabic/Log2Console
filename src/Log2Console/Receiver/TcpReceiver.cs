@@ -76,6 +76,11 @@ namespace Log2Console.Receiver
         {
             if (_tcpClient != null) return;
 
+            Task.Run(() => this.InitializeAsync());
+        }
+
+        private void InitializeAsync()
+        {
             TcpListener listener = new TcpListener(_ipv6 ? IPAddress.IPv6Any : IPAddress.Any, _port);
             listener.ExclusiveAddressUse = true;
             listener.Start(100);
@@ -85,7 +90,6 @@ namespace Log2Console.Receiver
 
             Task.Run(() => this.Start());
         }
-
         private void Start()
         {
             try

@@ -21,6 +21,7 @@ namespace Log2Console.Receiver.Parser
             var parsers = new List<ParserBase>();
             parsers.Add(new Log4j2Parser());
             parsers.Add(new Log4jParser());
+            parsers.Add(new Log4NetParser());
             return parsers;
         }
 
