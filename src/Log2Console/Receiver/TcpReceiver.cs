@@ -20,6 +20,7 @@ namespace Log2Console.Receiver
     {
         #region Port Property
 
+        [NonSerialized]
         private TcpListener tcpListener;
 
         int _port = 4505;
