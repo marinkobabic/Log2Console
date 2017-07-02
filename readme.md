@@ -1,5 +1,5 @@
 log4net.config
-
+```xml
 <log4net>
   <root>
     <level value="ALL" />
@@ -18,10 +18,12 @@ log4net.config
     <layout type="log4net.Layout.XmlLayout" />
   </appender>
 </log4net>
+```xml
 
 
 
 nlog.config
+```xml
 <nlog xmlns="http://www.nlog-project.org/schemas/NLog.mono2.xsd"
       xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
       autoReload="true"
@@ -55,9 +57,10 @@ nlog.config
   </rules>
 
 </nlog>
+```xml
 
 log4j.yml
-
+```
 Configutation:
   name: Default
 
@@ -81,4 +84,4 @@ Configutation:
         level: debug
         AppenderRef:
           - ref: Socket_Appender
-
+```
