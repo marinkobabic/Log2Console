@@ -20,6 +20,8 @@ namespace Log2Console.Receiver
     {
         #region Port Property
 
+        private TcpListener tcpListener;
+
         int _port = 4505;
         [Category("Configuration")]
         [DisplayName("TCP Port Number")]
@@ -74,18 +76,18 @@ namespace Log2Console.Receiver
 
         public override void Initialize()
         {
-            if (_tcpClient != null) return;
+            if (tcpListener != null) return;
 
             Task.Run(() => this.InitializeAsync());
         }
 
         private void InitializeAsync()
         {
-            TcpListener listener = new TcpListener(_ipv6 ? IPAddress.IPv6Any : IPAddress.Any, _port);
-            listener.ExclusiveAddressUse = true;
-            listener.Start(100);
+            this.tcpListener = new TcpListener(_ipv6 ? IPAddress.IPv6Any : IPAddress.Any, _port);
+            this.tcpListener.ExclusiveAddressUse = true;
+            this.tcpListener.Start(100);
 
-            _tcpClient = listener.AcceptTcpClient();
+            _tcpClient = this.tcpListener.AcceptTcpClient();
             _tcpClient.ReceiveBufferSize = _bufferSize;
 
             Task.Run(() => this.Start());
@@ -143,8 +145,7 @@ namespace Log2Console.Receiver
                     ms.Write(data, 0, numBytesRead);
                 }
 
-                var test = ms.GenerateStringFromStream(Encoding.Default);
-                var jou = test.Split('\0');
+                
                 ms.Position = 0;
                 return ms;
             }
@@ -156,6 +157,9 @@ namespace Log2Console.Receiver
 
             _tcpClient.Close();
             _tcpClient = null;
+
+            this.tcpListener.Stop();
+            this.tcpListener = null;
         }
 
         #endregion
