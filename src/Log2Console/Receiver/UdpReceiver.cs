@@ -139,7 +139,7 @@ namespace Log2Console.Receiver
                         l.LoggerName = $"{_remoteEndPoint.Address.ToString().Replace(".", "-")}_{l.LoggerName}";
                         Notifiable.Notify(l);
                     });
-                    this.GetParser(loggingEvent).Parse(loggingEvent, "UdpLogger", action);
+                    this.GetParser(loggingEvent).Parser.Parse(loggingEvent, "UdpLogger", action);
                 }
                 catch (Exception ex)
                 {

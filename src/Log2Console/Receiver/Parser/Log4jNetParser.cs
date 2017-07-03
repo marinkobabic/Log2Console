@@ -7,42 +7,19 @@ using System.Text;
 using System.Xml;
 
 using Log2Console.Log;
+using Log2Console.Receiver.Parser;
 
 namespace Log2Console.Receiver
 {
-    public class Log4NetParser : ParserBase
+    public class Log4NetParser : XmlParserBase
     {
-        static readonly DateTime s1970 = new DateTime(1970, 1, 1);
-
-        /// <summary>
-        /// We can share parser context to improve performance
-        /// </summary>
-        private readonly XmlParserContext _xmlContext = CreateContext();
-
-        private static XmlParserContext CreateContext()
+        protected override void AddXmlNamespaces(XmlNamespaceManager namespaceManager)
         {
-            var nt = new NameTable();
-            var nsmanager = new XmlNamespaceManager(nt);
-            nsmanager.AddNamespace("log4net", "http://csharptest.net/downloads/schema/log4net.xsd");
-            return new XmlParserContext(nt, nsmanager, "elem", XmlSpace.None, Encoding.UTF8);
+            namespaceManager.AddNamespace("log4net", "http://csharptest.net/downloads/schema/log4net.xsd");
+            base.AddXmlNamespaces(namespaceManager);
         }
 
-        /// <summary>
-        /// We can share settings to improve performance
-        /// </summary>
-        readonly XmlReaderSettings _xmlSettings = CreateSettings();
-
-        static XmlReaderSettings CreateSettings()
-        {
-            return new XmlReaderSettings { CloseInput = false, ValidationType = ValidationType.None };
-        }
-
-        private bool CanRead(XmlReader reader)
-        {
-            reader.Read();
-            return reader.MoveToContent() == XmlNodeType.Element && reader.Name == "log4net:event";
-        }
-
+        protected override string GetEventName => "log4net:event";
 
         /// <summary>
         /// Here we expect the log event to use the log4net schema.
@@ -60,12 +37,10 @@ namespace Log2Console.Receiver
         /// 
         /// Implementation inspired from: http://geekswithblogs.net/kobush/archive/2006/04/20/75717.aspx
         /// 
-        protected override void ParseInternal(Stream logStream, string defaultLogger, Action<LogMessage> logMsgAction )
+        protected override void ParseInternal(ParserInfo parserInfo, string defaultLogger, Action<LogMessage> logMsgAction )
         {
-            using (XmlReader reader = XmlReader.Create(logStream, this._xmlSettings, _xmlContext))
+            using (XmlReader reader = (XmlReader)parserInfo.Reader)
             {
-
-
                 var logMsg = new LogMessage();
 
                 if (!CanRead(reader))
@@ -138,15 +113,6 @@ namespace Log2Console.Receiver
 
                  logMsgAction(logMsg);
             }
-        }
-
-        protected override bool CanParseInternal(Stream stream)
-        {
-            stream.Position = 0;
-            var reader = XmlReader.Create(stream, _xmlSettings, _xmlContext);
-            var canParse = this.CanRead(reader);
-            stream.Position = 0;
-            return canParse;
         }
     }
 }

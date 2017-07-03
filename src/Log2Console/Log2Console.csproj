@@ -111,13 +111,16 @@
     <Compile Include="Program.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
     <Compile Include="Receiver\CsvFileReceiver.cs" />
+    <Compile Include="Receiver\ParserType.cs" />
     <Compile Include="Receiver\Parser\Log4j2Parser.cs" />
     <Compile Include="Receiver\Parser\Log4jNetParser.cs" />
     <Compile Include="Receiver\Parser\LoggingEvent.cs" />
+    <Compile Include="Receiver\Parser\ParserInfo.cs" />
     <Compile Include="Receiver\Parser\StreamExtensions.cs" />
     <Compile Include="Receiver\Parser\Log4jParser.cs" />
     <Compile Include="Receiver\Parser\ParserBase.cs" />
     <Compile Include="Receiver\Parser\ParserFactory.cs" />
+    <Compile Include="Receiver\Parser\XmlParserBase.cs" />
     <Compile Include="TypeExtensions.cs" />
     <Compile Include="Win32ApiCodePack\CommonDllNames.cs" />
     <Compile Include="Win32ApiCodePack\Core.cs" />

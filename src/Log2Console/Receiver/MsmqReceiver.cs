@@ -136,7 +136,7 @@ namespace Log2Console.Receiver
                             logMsg.LoggerName = $"{QueueName.TrimStart('.')}_{logMsg.LoggerName}";
                             Notifiable.Notify(logMsg);
                         });
-                        this.GetParser(loggingEvent).Parse(loggingEvent, "MSMQLogger", action);
+                        this.GetParser(loggingEvent).Parser.Parse(loggingEvent, "MSMQLogger", action);
 
                     }
 
@@ -161,7 +161,7 @@ namespace Log2Console.Receiver
                                     logMsg.LoggerName = string.Format("{0}_{1}", QueueName.TrimStart('.'), logMsg.LoggerName);
                                     logs[i] = logMsg;
                                 });
-                                this.GetParser(loggingEvent).Parse(loggingEvent, "MSMQLogger", action);
+                                this.GetParser(loggingEvent).Parser.Parse(loggingEvent, "MSMQLogger", action);
                             }
 
                             Notifiable.Notify(logs);

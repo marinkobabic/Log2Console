@@ -225,7 +225,7 @@ namespace Log2Console.Receiver
                     if (line.Contains("</log4j:event>"))
                     {
                         
-                        this.GetParser(sb.ToString()).Parse(sb.ToString(), _fullLoggerName, l => logMsgs.Add(l));
+                        this.GetParser(sb.ToString()).Parser.Parse(sb.ToString(), _fullLoggerName, l => logMsgs.Add(l));
                         sb = new StringBuilder();
                     }
                 }

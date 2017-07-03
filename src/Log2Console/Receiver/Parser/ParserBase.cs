@@ -11,15 +11,22 @@ namespace Log2Console.Receiver
     {
         public virtual void Parse(string logStream, string defaultLogger, Action<LogMessage> actionLogMsg)
         {
-            this.ParseInternal(logStream.GenerateStreamFromString(), defaultLogger, actionLogMsg);
+            var parserInfo = new ParserInfo();
+            parserInfo.Stream = logStream.GenerateStreamFromString();
+            this.ParseInternal(parserInfo, defaultLogger, actionLogMsg);
         }
 
+        internal virtual void ResetParserInfo(ParserInfo parserInfo)
+        {
+            
+        }
 
-        public virtual void Parse(Stream logStream, string defaultLogger, Action<LogMessage> actionLogMsg )
+        public virtual void Parse(ParserInfo parserInfo, string defaultLogger, Action<LogMessage> actionLogMsg)
         {
             try
             {
-                this.ParseInternal(logStream, defaultLogger, actionLogMsg);
+                this.ParseInternal(parserInfo, defaultLogger, actionLogMsg);
+                parserInfo.Reader = null;
             }
             catch (Exception e)
             {
@@ -37,20 +44,20 @@ namespace Log2Console.Receiver
             }
         }
 
-        protected abstract void ParseInternal(Stream logStream, string defaultLogger, Action<LogMessage> actionLogMsg);
+        protected abstract void ParseInternal(ParserInfo parserInfo, string defaultLogger, Action<LogMessage> actionLogMsg);
 
-        public bool CanParse(Stream stream)
+        public ParserInfo CanParse(Stream stream)
         {
             try
             {
                 return this.CanParseInternal(stream);
             }
-            catch (Exception )
+            catch (Exception)
             {
-                return false;
+                return null;
             }
         }
 
-        protected abstract bool CanParseInternal(Stream stream);
+        protected abstract ParserInfo CanParseInternal(Stream stream);
     }
 }

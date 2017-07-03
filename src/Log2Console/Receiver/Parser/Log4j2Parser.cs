@@ -11,15 +11,10 @@ using Log2Console.Receiver.Parser;
 
 namespace Log2Console.Receiver
 {
-    public class Log4j2Parser : ParserBase
+    public class Log4j2Parser : XmlParserBase
     {
-        static readonly DateTime s1970 = new DateTime(1970, 1, 1);
 
-        private bool CanRead(XmlReader reader)
-        {
-            reader.Read();
-            return reader.MoveToContent() == XmlNodeType.Element && reader.Name == "Events";
-        }
+        protected override string GetEventName => "Events";
 
 
         /// <summary>
@@ -38,17 +33,9 @@ namespace Log2Console.Receiver
         /// 
         /// Implementation inspired from: http://geekswithblogs.net/kobush/archive/2006/04/20/75717.aspx
         /// 
-        protected override void ParseInternal(Stream logStream, string defaultLogger, Action<LogMessage> logMsgAction)
+        protected override void ParseInternal(ParserInfo parserInfo, string defaultLogger, Action<LogMessage> logMsgAction)
         {
-            var settings = new XmlReaderSettings
-            {
-                CloseInput = false,
-                IgnoreWhitespace = true,
-                ValidationType = ValidationType.None,
-                ConformanceLevel = ConformanceLevel.Fragment
-            };
-
-            using (XmlReader reader = XmlReader.Create(logStream, settings))
+            using (XmlReader reader = (XmlReader)parserInfo.Reader)
             {
                 var logMsg = new LogMessage();
 
@@ -136,16 +123,6 @@ namespace Log2Console.Receiver
                     }
                 }
             }
-        }
-
-        
-        protected override bool CanParseInternal(Stream stream)
-        {
-            stream.Position = 0;
-            var reader = XmlReader.Create(stream);
-            var canParse = this.CanRead(reader);
-            stream.Position = 0;
-            return canParse;
         }
     }
 }

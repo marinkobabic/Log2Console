@@ -11,9 +11,9 @@ namespace Log2Console.Receiver.Parser
     {
         private static List<ParserBase> allParsers = GetAllParsers();
 
-        public ParserBase GetParser(string logStream)
+        public ParserInfo GetParserInfo(string logStream)
         {
-            return this.GetParser(logStream.GenerateStreamFromString());
+            return this.GetParserInfo(logStream.GenerateStreamFromString());
         }
 
         private static List<ParserBase> GetAllParsers()
@@ -25,9 +25,38 @@ namespace Log2Console.Receiver.Parser
             return parsers;
         }
 
-        public ParserBase GetParser(Stream logStream)
+        public ParserInfo GetParserInfo(Stream logStream)
         {
-            return allParsers.FirstOrDefault(p => p.CanParse(logStream));
+            foreach (var parserBase in allParsers)
+            {
+                var parserInfo = parserBase.CanParse(logStream);
+                if (parserInfo != null && parserInfo.CanParse)
+                {
+                    return parserInfo;
+                }
+            }
+            return null;
+        }
+
+        public ParserInfo GetParserInfo(ParserType parserType)
+        {
+            var parserInfo = new ParserInfo();
+            parserInfo.CanParse = true;
+            switch (parserType)
+            {
+                case ParserType.Log4j2:
+                    parserInfo.Parser = new Log4j2Parser();
+                    break;
+                case ParserType.Log4Net:
+                    parserInfo.Parser = new Log4NetParser();
+                    break;
+                case ParserType.NLog:
+                    parserInfo.Parser = new Log4jParser();
+                    break;
+                default:
+                    throw new ArgumentOutOfRangeException(nameof(parserType), parserType, null);
+            }
+            return parserInfo;
         }
     }
 }

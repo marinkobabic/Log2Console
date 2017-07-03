@@ -33,6 +33,11 @@ namespace Log2Console.Receiver
             set { _port = value; }
         }
 
+        [Category("Configuration")]
+        [DisplayName("Logging Framework")]
+        [DefaultValue(Receiver.ParserType.NLog)]
+
+        public ParserType ParserType { get; set; }
         #endregion
 
         #region IpV6 Property
@@ -93,6 +98,16 @@ namespace Log2Console.Receiver
 
             Task.Run(() => this.Start());
         }
+
+        private bool ReconnectIfNeeded()
+        {
+            if (_tcpClient != null && _tcpClient.Connected) return false;
+            this.Terminate();
+            Thread.Sleep(TimeSpan.FromSeconds(1));
+            this.Initialize();
+            return true;
+        }
+
         private void Start()
         {
             try
@@ -102,54 +117,54 @@ namespace Log2Console.Receiver
 
                     while (_tcpClient != null)
                     {
-                        if (!_tcpClient.Connected)
+                        if (this.ReconnectIfNeeded())
                         {
-                            this.Terminate();
-                            Thread.Sleep(TimeSpan.FromSeconds(1));
-                            this.Initialize();
                             return;
                         }
 
-                        var ns = this.GetStream(_tcpClient);
-                   
                         var action = new Action<LogMessage>(logMsg =>
                         {
                             logMsg.LoggerName = string.Format(":{1}.{0}", logMsg.LoggerName, _port);
 
                             Notifiable?.Notify(logMsg);
                         });
-                        this.GetParser(ns).Parse(ns, "TcpLogger", action);
+
+                        var networkStream = _tcpClient.GetStream();
+
+                        if (networkStream.DataAvailable)
+                        {
+                            var parserInfo = this.GetParser(this.ParserType);
+                            if (parserInfo == null)
+                            {
+                                this.ResetConnectionForce();
+                                return;       
+                            }
+                            parserInfo.Stream = _tcpClient.GetStream();
+                            parserInfo.Parser.Parse(parserInfo, "TcpLogger", action);
+                        }
+                        else
+                        {
+                            Thread.Sleep(TimeSpan.FromMilliseconds(300));
+                            if (!networkStream.DataAvailable)
+                            {
+                                ResetConnectionForce();
+                            }
+                        }
                     }
                 }
 
             }
-            catch (IOException ioException)
-            {
-                Console.WriteLine(ioException);
-            }
             catch (Exception e)
             {
                 Console.WriteLine(e);
+                this.ReconnectIfNeeded();
             }
         }
 
-        private MemoryStream GetStream(TcpClient tcpClient)
+        private void ResetConnectionForce()
         {
-            using (NetworkStream stream = tcpClient.GetStream())
-            {
-                byte[] data = new byte[1024];
-                var ms = new MemoryStream();
-
-                int numBytesRead;
-                while (stream.DataAvailable && (numBytesRead = stream.Read(data, 0, data.Length)) > 0)
-                {
-                    ms.Write(data, 0, numBytesRead);
-                }
-
-                
-                ms.Position = 0;
-                return ms;
-            }
+            this._tcpClient.Close();
+            this.ReconnectIfNeeded();
         }
 
         public override void Terminate()
